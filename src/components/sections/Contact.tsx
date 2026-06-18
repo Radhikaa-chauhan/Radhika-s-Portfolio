@@ -6,6 +6,7 @@ import { fadeInUp, fadeInLeft, fadeInRight, staggerContainer, viewportConfig } f
 import MagneticButton from '@/components/ui/MagneticButton';
 import { Mail, Send } from 'lucide-react';
 import { Github, Linkedin, Twitter } from '@/components/ui/BrandIcons';
+import { sendEmail } from '@/app/actions/sendEmail';
 
 export default function Contact() {
   const [formState, setFormState] = useState({
@@ -13,13 +14,31 @@ export default function Contact() {
     email: '',
     message: '',
   });
+  const [isSending, setIsSending] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 3000);
-    setFormState({ name: '', email: '', message: '' });
+    setIsSending(true);
+    setError(null);
+    setSubmitted(false);
+
+    try {
+      const res = await sendEmail(formState);
+      if (res.success) {
+        setSubmitted(true);
+        setFormState({ name: '', email: '', message: '' });
+        setTimeout(() => setSubmitted(false), 5000);
+      } else {
+        setError(res.error || 'Failed to send email.');
+      }
+    } catch (err: any) {
+      setError('An unexpected error occurred. Please try again.');
+      console.error(err);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -101,6 +120,26 @@ export default function Contact() {
                 required
               />
 
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  style={{
+                    padding: '12px 24px',
+                    background: 'rgba(248, 113, 113, 0.1)',
+                    border: '1px solid rgba(248, 113, 113, 0.2)',
+                    borderRadius: 'var(--radius-md)',
+                    color: '#f87171',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '0.85rem',
+                    textAlign: 'center',
+                    marginBottom: '15px',
+                  }}
+                >
+                  ❌ {error}
+                </motion.div>
+              )}
+
               {submitted ? (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -119,8 +158,16 @@ export default function Contact() {
                   ✅ Message sent successfully! I&apos;ll get back to you soon.
                 </motion.div>
               ) : (
-                <MagneticButton className="btn btn-primary" onClick={() => {}}>
-                  Send Message
+                <MagneticButton
+                  className="btn btn-primary"
+                  onClick={() => {}}
+                  disabled={isSending}
+                  style={{
+                    opacity: isSending ? 0.6 : 1,
+                    cursor: isSending ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {isSending ? 'Sending...' : 'Send Message'}
                   <Send size={14} />
                 </MagneticButton>
               )}

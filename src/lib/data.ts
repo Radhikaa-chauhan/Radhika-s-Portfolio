@@ -75,7 +75,7 @@ export const projects: Project[] = [
     languageColor: '#3572A5',
     forks: 0,
     githubUrl: 'https://github.com/Radhikaa-chauhan/PingMD',
-    category: 'AI/ML',
+    category: 'AI / ML',
     featured: true,
   },
   {
@@ -87,7 +87,7 @@ export const projects: Project[] = [
     languageColor: '#3178C6',
     forks: 0,
     githubUrl: 'https://github.com/Radhikaa-chauhan/watcher',
-    category: 'AI/ML',
+    category: 'AI / ML',
     featured: true,
   },
   {
@@ -122,7 +122,7 @@ import {
   SiReact, SiNextdotjs, SiHtml5, SiTailwindcss, SiFramer,
   SiNodedotjs, SiExpress, SiFastapi, SiGraphql,
   SiPostgresql, SiMongodb, SiRedis, SiPrisma,
-  SiLangchain, SiOpenai, SiScikitlearn, SiTensorflow,
+  SiLangchain, SiOpenai,
   SiGit, SiDocker, SiPostman, SiLinux,
 } from 'react-icons/si';
 import { IconType } from 'react-icons';
@@ -167,8 +167,6 @@ export const skills: Skill[] = [
   // AI / ML
   { name: 'LangChain',   category: 'AI / ML', icon: SiLangchain },
   { name: 'OpenAI API',  category: 'AI / ML', icon: SiOpenai },
-  { name: 'Scikit-learn',category: 'AI / ML', icon: SiScikitlearn },
-  { name: 'TensorFlow',  category: 'AI / ML', icon: SiTensorflow },
   // Tools
   { name: 'Git',     category: 'Tools', icon: SiGit },
   { name: 'Docker',  category: 'Tools', icon: SiDocker },

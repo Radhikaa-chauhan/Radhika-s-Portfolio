@@ -11,7 +11,7 @@ import Experience from '@/components/sections/Experience';
 import OpenSource from '@/components/sections/OpenSource';
 
 import Contact from '@/components/sections/Contact';
-import PixelTransition from '@/components/ui/PixelTransition';
+
 
 // Lazy load cursor since it's a non-critical visual enhancement
 const CustomCursor = dynamic(() => import('@/components/layout/CustomCursor'), {
@@ -22,7 +22,6 @@ export default function Home() {
   return (
     <>
       <CustomCursor />
-      <PixelTransition />
       <Navbar />
       <main>
         <Hero />

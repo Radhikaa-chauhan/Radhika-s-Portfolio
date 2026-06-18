@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { fadeInUp, staggerContainer, staggerItem, viewportConfig } from '@/lib/animations';
 import { githubStats, months, generateHeatmapData } from '@/lib/data';
@@ -13,42 +13,152 @@ function CountUp({ target, duration = 2 }: { target: number; duration?: number }
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || hasAnimated) return;
+    if (!el) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setHasAnimated(true);
-          const obj = { value: 0 };
-          gsap.to(obj, {
-            value: target,
-            duration,
-            ease: 'power2.out',
-            onUpdate: () => {
-              el.textContent = Math.round(obj.value).toString();
-            },
-          });
-          observer.disconnect();
-        }
+    if (!hasAnimated) {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting) {
+            setHasAnimated(true);
+            observer.disconnect();
+          }
+        },
+        { threshold: 0.5 }
+      );
+      observer.observe(el);
+      return () => observer.disconnect();
+    }
+
+    const obj = { value: parseFloat(el.textContent || '0') || 0 };
+    gsap.to(obj, {
+      value: target,
+      duration,
+      ease: 'power2.out',
+      onUpdate: () => {
+        el.textContent = Math.round(obj.value).toString();
       },
-      { threshold: 0.5 }
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
+    });
   }, [target, duration, hasAnimated]);
 
   return <span ref={ref}>0</span>;
 }
 
 export default function OpenSource() {
-  const heatmapData = useMemo(() => generateHeatmapData(), []);
+  const [statsData, setStatsData] = useState({
+    username: githubStats.username,
+    displayName: githubStats.displayName,
+    avatarUrl: '',
+    repositories: githubStats.repositories,
+    contributions: githubStats.contributions,
+    pullRequests: githubStats.pullRequests,
+    issues: githubStats.issues,
+  });
+
+  const [heatmapData, setHeatmapData] = useState<number[][]>([]);
+
+  useEffect(() => {
+    setHeatmapData(generateHeatmapData());
+
+    const username = githubStats.username;
+
+    // 1. Fetch profile details (repos, name, avatar)
+    fetch(`https://api.github.com/users/${username}`)
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch profile');
+        return res.json();
+      })
+      .then((data) => {
+        setStatsData((prev) => ({
+          ...prev,
+          displayName: data.name || prev.displayName,
+          repositories: data.public_repos,
+          avatarUrl: data.avatar_url,
+        }));
+      })
+      .catch((err) => console.warn('GitHub profile fetch error:', err));
+
+    // 2. Fetch contribution graph data
+    fetch(`https://github-contributions-api.jogruber.de/v4/${username}`)
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch contributions');
+        return res.json();
+      })
+      .then((data) => {
+        const rawContributions = data.contributions;
+        if (!rawContributions || rawContributions.length === 0) return;
+
+        // 1. Sort contributions chronologically (API returns newest first / per-year blocks)
+        const sorted = rawContributions.sort((a: any, b: any) => a.date.localeCompare(b.date));
+
+        // 2. Filter out future days (API returns full current calendar year including future days)
+        const todayObj = new Date();
+        const todayStr = todayObj.toISOString().split('T')[0];
+        const pastAndPresent = sorted.filter((c: any) => c.date <= todayStr);
+
+        // 3. Align start day of the grid to Sunday so rows represent weekdays correctly
+        const dayOfWeek = todayObj.getDay(); // 0 (Sunday) to 6 (Saturday)
+        const totalDaysNeeded = 51 * 7 + (dayOfWeek + 1);
+        const alignedContributions = pastAndPresent.slice(-totalDaysNeeded);
+
+        // 4. Build 52 weeks grid (each week is 7 days starting on Sunday)
+        const grid: number[][] = [];
+        for (let i = 0; i < 52; i++) {
+          const week: number[] = [];
+          for (let j = 0; j < 7; j++) {
+            const index = i * 7 + j;
+            if (index < alignedContributions.length) {
+              week.push(alignedContributions[index].level);
+            } else {
+              week.push(0); // Pad future days of the current week with 0
+            }
+          }
+          grid.push(week);
+        }
+        setHeatmapData(grid);
+
+        // Sum contributions for the last year
+        const total = alignedContributions.reduce((sum: number, item: any) => sum + item.count, 0);
+        setStatsData((prev) => ({
+          ...prev,
+          contributions: total || prev.contributions,
+        }));
+      })
+      .catch((err) => console.warn('GitHub contributions fetch error:', err));
+
+    // 3. Fetch Pull Requests count
+    fetch(`https://api.github.com/search/issues?q=author:${username}+type:pr`)
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch PRs');
+        return res.json();
+      })
+      .then((data) => {
+        setStatsData((prev) => ({
+          ...prev,
+          pullRequests: data.total_count,
+        }));
+      })
+      .catch((err) => console.warn('GitHub PR fetch error:', err));
+
+    // 4. Fetch Issues count
+    fetch(`https://api.github.com/search/issues?q=author:${username}+type:issue`)
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch issues');
+        return res.json();
+      })
+      .then((data) => {
+        setStatsData((prev) => ({
+          ...prev,
+          issues: data.total_count,
+        }));
+      })
+      .catch((err) => console.warn('GitHub issue fetch error:', err));
+  }, []);
 
   const stats = [
-    { value: githubStats.repositories, label: 'Repositories' },
-    { value: githubStats.contributions, label: 'Contributions' },
-    { value: githubStats.pullRequests, label: 'Pull Requests' },
-    { value: githubStats.issues, label: 'Issues' },
+    { value: statsData.repositories, label: 'Repositories' },
+    { value: statsData.contributions, label: 'Contributions' },
+    { value: statsData.pullRequests, label: 'Pull Requests' },
+    { value: statsData.issues, label: 'Issues' },
   ];
 
   return (
@@ -79,18 +189,23 @@ export default function OpenSource() {
             <div
               className="github-avatar"
               style={{
-                background: 'linear-gradient(135deg, var(--accent-dim), var(--accent))',
+                background: statsData.avatarUrl
+                  ? `url(${statsData.avatarUrl}) no-repeat center/cover`
+                  : 'linear-gradient(135deg, var(--accent-dim), var(--accent))',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: '1.5rem',
+                width: '60px',
+                height: '60px',
+                borderRadius: '50%',
               }}
             >
-              👩‍💻
+              {!statsData.avatarUrl && '👩‍💻'}
             </div>
             <div className="github-info">
-              <h3>{githubStats.displayName}</h3>
-              <p className="github-username">@{githubStats.username}</p>
+              <h3>{statsData.displayName}</h3>
+              <p className="github-username">@{statsData.username}</p>
             </div>
           </motion.div>
 

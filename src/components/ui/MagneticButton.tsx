@@ -10,6 +10,8 @@ interface MagneticButtonProps {
   onClick?: (e: React.MouseEvent<HTMLElement>) => void;
   href?: string;
   target?: string;
+  disabled?: boolean;
+  style?: React.CSSProperties;
 }
 
 export default function MagneticButton({
@@ -19,12 +21,14 @@ export default function MagneticButton({
   onClick,
   href,
   target,
+  disabled,
+  style,
 }: MagneticButtonProps) {
   const ref = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el || disabled) return;
 
     const handleMouseMove = (e: MouseEvent) => {
       const rect = el.getBoundingClientRect();
@@ -57,7 +61,7 @@ export default function MagneticButton({
       el.removeEventListener('mousemove', handleMouseMove);
       el.removeEventListener('mouseleave', handleMouseLeave);
     };
-  }, [strength]);
+  }, [strength, disabled]);
 
   if (href) {
     return (
@@ -68,6 +72,7 @@ export default function MagneticButton({
         className={className}
         onClick={onClick}
         rel={target === '_blank' ? 'noopener noreferrer' : undefined}
+        style={style}
       >
         {children}
       </a>
@@ -79,6 +84,8 @@ export default function MagneticButton({
       ref={ref as React.RefObject<HTMLButtonElement>}
       className={className}
       onClick={onClick}
+      disabled={disabled}
+      style={style}
     >
       {children}
     </button>
