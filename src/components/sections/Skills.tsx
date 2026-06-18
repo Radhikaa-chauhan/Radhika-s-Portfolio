@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { fadeInUp, staggerContainer, viewportConfig } from '@/lib/animations';
 import { skills, skillCategories, otherSkills } from '@/lib/data';
 import { IconType } from 'react-icons';
 import { Zap } from 'lucide-react';
 
-const cardVariants = {
+const cardVariants: Variants = {
   hidden: { opacity: 0, y: 20, scale: 0.9 },
   visible: (i: number) => ({
     opacity: 1,

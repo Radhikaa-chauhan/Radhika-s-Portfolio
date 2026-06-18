@@ -12,12 +12,6 @@ export interface Project {
   featured: boolean;
 }
 
-export interface Skill {
-  name: string;
-  level: number;
-  category: string;
-}
-
 export interface Experience {
   id: string;
   role: string;
